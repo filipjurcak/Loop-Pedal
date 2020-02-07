@@ -1,0 +1,42 @@
+!name Record All
+
+message Record All
+
+Track 1
+if !FocusLock
+    FocusLock
+endif
+Track 2
+if !FocusLock
+    FocusLock
+endif
+Track 3
+if !FocusLock
+    FocusLock
+endif
+Track 4
+if !FocusLock
+    FocusLock
+endif
+
+Track 1
+if loopFrames == 0
+    Record
+elseif mode == record
+    Play
+elseif mode == overdub
+    Play
+else
+    Overdub
+endif
+
+#Track 1
+#!FocusLock
+#Track 2
+#!FocusLock
+#Track 3
+#!FocusLock
+#Track 4
+#!FocusLock
+
+Track 1

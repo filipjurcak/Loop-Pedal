@@ -1,0 +1,37 @@
+!name Stop All
+
+message Stop All
+
+Track 1
+if !inPause
+    Pause
+elseif inMute
+    Pause
+    Pause
+endif
+
+Track 2
+if !inPause
+    Pause
+elseif inMute
+    Pause
+    Pause
+endif
+
+Track 3
+if !inPause
+    Pause
+elseif inMute
+    Pause
+    Pause
+endif
+
+Track 4
+if !inPause
+    Pause
+elseif inMute
+    Pause
+    Pause
+endif
+
+Track 1

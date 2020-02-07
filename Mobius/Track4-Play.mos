@@ -1,0 +1,8 @@
+!name Track 4 Play
+
+Track 4
+if inMute
+    Mute
+else
+    MuteOn
+endif

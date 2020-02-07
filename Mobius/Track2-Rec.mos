@@ -1,0 +1,12 @@
+!name Track 2 Rec
+
+Track 2
+if loopFrames == 0
+    Record
+elseif mode == record
+    Play
+elseif mode == overdub
+    Play
+else
+    Overdub
+endif
