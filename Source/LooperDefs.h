@@ -17,7 +17,7 @@ enum class LooperResult {
 
 // this needs to be in sync with Arduino code to work correctly,
 // so if you ever change Arduino code check this
-enum class ButtonMidiNotes {
+enum ButtonMidiNotes: int {
     Recplay = 69,
     Stop = 70,
     Mode = 71,

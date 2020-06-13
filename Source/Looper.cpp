@@ -341,6 +341,14 @@ void Looper::ChangeMode(LoopStates mode)
     this->sendChangeMessage();
 }
 
+void Looper::ChangeSelectedTrack(int index)
+{
+    ScopedLock sl(this->mutex);
+    this->tracks[this->selectedTrack]->UnselectTrack();
+    this->selectedTrack = index;
+    this->tracks[this->selectedTrack]->SelectTrack();
+}
+
 LooperResult Looper::ResetAllTracks()
 {
 //   for (int i = 0; i < this->GetNumTracks(); ++i)
@@ -562,51 +570,32 @@ void Looper::handleIncomingMidiMessage(MidiInput *source, const MidiMessage& mes
     if (message.isNoteOn()) {
         int noteNumber = message.getNoteNumber();
 
-        if (noteNumber == int(ButtonMidiNotes::Undo)) {
+        if (noteNumber == ButtonMidiNotes::Undo) {
             Logger::writeToLog("Undo on track " + String(this->selectedTrack + 1));
         }
 
         if (this->mode == LoopStates::Play) {
-            if (noteNumber == int(ButtonMidiNotes::Recplay)) {
+            if (noteNumber == ButtonMidiNotes::Recplay) {
                 Logger::writeToLog("Play All");
-            } else if (noteNumber == int(ButtonMidiNotes::Stop)) {
+            } else if (noteNumber == ButtonMidiNotes::Stop) {
                 Logger::writeToLog("Stop All");
-            } else if (noteNumber == int(ButtonMidiNotes::Mode)) {
+            } else if (noteNumber == ButtonMidiNotes::Mode) {
                 this->ChangeMode(LoopStates::PlayInRecord);
                 Logger::writeToLog("Record mode - play in record");
-            } else if (noteNumber == int(ButtonMidiNotes::Clear)) {
+            } else if (noteNumber == ButtonMidiNotes::Clear) {
                 Logger::writeToLog("Clear All");
-            } else if (noteNumber == int(ButtonMidiNotes::Track1)) {
-                this->tracks[0]->MuteUnmute();
-                if (this->tracks[0]->IsMuted()) {
-                    Logger::writeToLog("Mute Track 1");
+            } else if (ButtonMidiNotes::Track1 <= noteNumber && noteNumber <= ButtonMidiNotes::Track4) {  // one of the tracks pressed
+                int firstTrackIndex = ButtonMidiNotes::Track1;
+                int trackIndex = noteNumber - firstTrackIndex;
+                this->tracks[trackIndex]->MuteUnmute();
+                if (this->tracks[trackIndex]->IsMuted()) {
+                    Logger::writeToLog("Mute Track " + String(trackIndex + 1));
                 } else {
-                    Logger::writeToLog("Play Track 1");
-                }
-            } else if (noteNumber == int(ButtonMidiNotes::Track2)) {
-                this->tracks[1]->MuteUnmute();
-                if (this->tracks[1]->IsMuted()) {
-                    Logger::writeToLog("Mute Track 2");
-                } else {
-                    Logger::writeToLog("Play Track 2");
-                }
-            } else if (noteNumber == int(ButtonMidiNotes::Track3)) {
-                this->tracks[2]->MuteUnmute();
-                if (this->tracks[2]->IsMuted()) {
-                    Logger::writeToLog("Mute Track 3");
-                } else {
-                    Logger::writeToLog("Play Track 3");
-                }
-            } else if (noteNumber == int(ButtonMidiNotes::Track4)) {
-                this->tracks[3]->MuteUnmute();
-                if (this->tracks[3]->IsMuted()) {
-                    Logger::writeToLog("Mute Track 4");
-                } else {
-                    Logger::writeToLog("Play Track 4");
+                    Logger::writeToLog("Play Track " + String(trackIndex + 1));
                 }
             }
         } else {
-            if (noteNumber == int(ButtonMidiNotes::Recplay)) {
+            if (noteNumber == ButtonMidiNotes::Recplay) {
                 if (this->mode == LoopStates::PlayInRecord) {
                     if (!wasRecorded) {
                         this->startLoopingTime = Time::getMillisecondCounterHiRes() * 0.001;
@@ -633,126 +622,52 @@ void Looper::handleIncomingMidiMessage(MidiInput *source, const MidiMessage& mes
                     this->ChangeMode(LoopStates::PlayInRecord);
                     Logger::writeToLog("Play in record");
                 }
-            } else if (noteNumber == int(ButtonMidiNotes::Mode)) {
+            } else if (noteNumber == ButtonMidiNotes::Mode) {
                 this->ChangeMode(LoopStates::Play);
                 Logger::writeToLog("Play Mode");
-            } else if (noteNumber == int(ButtonMidiNotes::Stop)) {
-                if (this->selectedTrack == 0) {
-                    this->tracks[0]->MuteUnmute();
-                    if (this->tracks[0]->IsMuted()) {
-                        Logger::writeToLog("Muting Track 1 during recording");
-                    } else {
-                        Logger::writeToLog("Unmuting Track 1 during recording");
-                    }
-                } else if (selectedTrack == 1) {
-                    this->tracks[1]->MuteUnmute();
-                    if (this->tracks[1]->IsMuted()) {
-                        Logger::writeToLog("Muting Track 2 during recording");
-                    } else {
-                        Logger::writeToLog("Unmuting Track 2 during recording");
-                    }
-                } else if (this->selectedTrack == 2) {
-                    this->tracks[2]->MuteUnmute();
-                    if (tracks[2]->IsMuted()) {
-                        Logger::writeToLog("Muting Track 3 during recording");
-                    } else {
-                        Logger::writeToLog("Unmuting Track 3 during recording");
-                    }
-                } else if (this->selectedTrack == 3) {
-                    this->tracks[3]->MuteUnmute();
-                    if (this->tracks[3]->IsMuted()) {
-                        Logger::writeToLog("Muting Track 4 during recording");
-                    } else {
-                        Logger::writeToLog("Unmuting Track 4 during recording");
-                    }
+            } else if (noteNumber == ButtonMidiNotes::Stop) {
+                this->tracks[this->selectedTrack]->MuteUnmute();
+                if (this->tracks[this->selectedTrack]->IsMuted()) {
+                    Logger::writeToLog("Muting Track " + String(this->selectedTrack + 1) + " during recording");
+                } else {
+                    Logger::writeToLog("Unmuting Track " + String(this->selectedTrack + 1) + " during recording");
                 }
-
-            } else if (noteNumber == int(ButtonMidiNotes::Clear)) {
+            } else if (noteNumber == ButtonMidiNotes::Clear) {
                 Logger::writeToLog("Clear track " + String(this->selectedTrack + 1));
 //                this->tracks[this->selectedTrack]->sendChangeMessage();
-            } else if (noteNumber == int(ButtonMidiNotes::Track1)) {
+            } else if (ButtonMidiNotes::Track1 <= noteNumber && noteNumber <= ButtonMidiNotes::Track4) {  // one of the tracks pressed
                 int previousSelectedTrack = this->selectedTrack;
-                this->tracks[previousSelectedTrack]->UnselectTrack();
-                this->selectedTrack = 0;
-                this->tracks[0]->SelectTrack();
+                int firstTrackIndex = ButtonMidiNotes::Track1;
+                int selectedTrack = noteNumber - firstTrackIndex;
+                this->ChangeSelectedTrack(selectedTrack);
                 if (this->mode == LoopStates::Record) {
-                    this->ChangeMode(LoopStates::Overdub);
-                    if (previousSelectedTrack != 0) {
-                        Logger::writeToLog("Changing record to overdub from track " + String(previousSelectedTrack + 1) + " to Track 1");
+                    if (!this->wasRecorded) {
+                        this->loopTime = Time::getMillisecondCounterHiRes() * 0.001 - startLoopingTime;
+                        for (int i = 0; i < this->tracks.size(); i++) {
+                            this->tracks[i]->SetLoopDuration(this->loopTime);
+                        }
+                        Logger::writeToLog("Loop time is " + String(this->loopTime));
+                        this->wasRecorded = true;
+                        if (previousSelectedTrack == this->selectedTrack) {
+                            Logger::writeToLog("Overdub after first recording");
+                        } else {
+                            Logger::writeToLog("Changing record to overdub from track " + String(previousSelectedTrack + 1) + " to Track " + String(this->selectedTrack + 1));
+                        }
+                    } else if (previousSelectedTrack != this->selectedTrack) {
+                        Logger::writeToLog("Changing record to overdub from track " + String(previousSelectedTrack + 1) + " to Track " + String(this->selectedTrack + 1));
+                    } else {
+                        Logger::writeToLog("Changing record to overdub");
                     }
-                    Logger::writeToLog("Changing record to overdub");
+                    this->ChangeMode(LoopStates::Overdub);
                 } else if (this->mode == LoopStates::Overdub) {
-                    if (previousSelectedTrack == 0) {
+                    if (previousSelectedTrack == this->selectedTrack) {
                         this->ChangeMode(LoopStates::PlayInRecord);
-                        Logger::writeToLog("Changing to Play In Record on Track 1");
+                        Logger::writeToLog("Changing to Play In Record on Track " + String(this->selectedTrack + 1));
                     } else {
-                        Logger::writeToLog("Overdub to Track 1 from Track " + String(previousSelectedTrack + 1));
+                        Logger::writeToLog("Overdub to Track " + String(this->selectedTrack + 1) + " from Track " + String(previousSelectedTrack + 1));
                     }
                 } else {
-                    Logger::writeToLog("Selected Track 1");
-                }
-            } else if (noteNumber == int(ButtonMidiNotes::Track2)) {
-                int previousSelectedTrack = this->selectedTrack;
-                this->tracks[previousSelectedTrack]->UnselectTrack();
-                this->selectedTrack = 1;
-                this->tracks[1]->SelectTrack();
-                if (this->mode == LoopStates::Record) {
-                    this->ChangeMode(LoopStates::Overdub);
-                    if (previousSelectedTrack != 1) {
-                        Logger::writeToLog("Changing record to overdub from track " + String(previousSelectedTrack + 1) + " to Track 2");
-                    }
-                    Logger::writeToLog("Changing record to overdub");
-                } else if (this->mode == LoopStates::Overdub) {
-                    if (previousSelectedTrack == 1) {
-                        this->ChangeMode(LoopStates::PlayInRecord);
-                        Logger::writeToLog("Changing to Play In Record on Track 2");
-                    } else {
-                        Logger::writeToLog("Overdub to Track 2 from Track " + String(previousSelectedTrack + 1));
-                    }
-                } else {
-                    Logger::writeToLog("Selected Track 2");
-                }
-            } else if (noteNumber == int(ButtonMidiNotes::Track3)) {
-                int previousSelectedTrack = this->selectedTrack;
-                this->tracks[previousSelectedTrack]->UnselectTrack();
-                this->selectedTrack = 2;
-                this->tracks[2]->SelectTrack();
-                if (this->mode == LoopStates::Record) {
-                    this->ChangeMode(LoopStates::Overdub);
-                    if (previousSelectedTrack != 2) {
-                        Logger::writeToLog("Changing record to overdub from track " + String(previousSelectedTrack + 1) + " to Track 3");
-                    }
-                    Logger::writeToLog("Changing record to overdub");
-                } else if (this->mode == LoopStates::Overdub) {
-                    if (previousSelectedTrack == 2) {
-                        this->mode = LoopStates::PlayInRecord;
-                        Logger::writeToLog("Changing to Play In Record on Track 3");
-                    } else {
-                        Logger::writeToLog("Overdub to Track 3 from Track " + String(previousSelectedTrack + 1));
-                    }
-                } else {
-                    Logger::writeToLog("Selected Track 3");
-                }
-            } else if (noteNumber == int(ButtonMidiNotes::Track4)) {
-                int previousSelectedTrack = this->selectedTrack;
-                this->tracks[previousSelectedTrack]->UnselectTrack();
-                this->selectedTrack = 3;
-                this->tracks[3]->SelectTrack();
-                if (this->mode == LoopStates::Record) {
-                    this->ChangeMode(LoopStates::Overdub);
-                    if (previousSelectedTrack != 3) {
-                        Logger::writeToLog("Changing record to overdub from track " + String(previousSelectedTrack + 1) + " to Track 4");
-                    }
-                    Logger::writeToLog("Changing record to overdub");
-                } else if (this->mode == LoopStates::Overdub) {
-                    if (previousSelectedTrack == 3) {
-                        this->ChangeMode(LoopStates::PlayInRecord);
-                        Logger::writeToLog("Changing to Play In Record on Track 4");
-                    } else {
-                        Logger::writeToLog("Overdub to Track 4 from Track " + String(previousSelectedTrack + 1));
-                    }
-                } else {
-                    Logger::writeToLog("Selected Track 4");
+                    Logger::writeToLog("Selected Track " + String(this->selectedTrack + 1));
                 }
             }
         }

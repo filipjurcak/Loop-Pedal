@@ -240,6 +240,8 @@ protected:
     
     
     void ChangeMode(LoopStates mode);
+    
+    void ChangeSelectedTrack(int index);
 
   /**
    * Typedef for a pointer-to-member-function that's exposed by the
@@ -313,4 +315,5 @@ private:
     int lastInputIndex = 0;
 //   GainProcessor* outputGain;
     NodeId gainNode = NodeId(Node::InvalidNode);
+    CriticalSection mutex;
 };
