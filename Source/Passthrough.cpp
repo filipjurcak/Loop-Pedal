@@ -1,11 +1,10 @@
 /*
-  =============================================================================
-    Passthrough.c
-    Created: 12 Jun 2020 7:09:50
-    Author:  Filip Jurca
   ============================================================================
+    Passthrough.cpp
+    Created: 12 Jun 2020 7:09:53pm
+    Author:  Filip Jurcak
+  ===========================================================================
 */
-
 
 #include "Passthrough.h"
 
@@ -18,18 +17,12 @@ PassthroughProcessor::PassthroughProcessor(int inputChannelCount, int outputChan
    jassert(outputChannelCount >= 0);
    jassert(outputChannelCount <= 2);
 
-   if (0 == outputChannelCount)
+   if (outputChannelCount == 0)
    {
       outputChannelCount = inputChannelCount;
    }
 
    this->setLatencySamples(0);
-   // if this was a plug-in, the plug-in wrapper code in JUCE would query us
-   // for our channel configuration and call the setPlayConfigDetails() method
-   // so that things would be set correctly internally as an AudioProcessor
-   // object (which are always initialized as zero in, zero out). The sample rate
-   // and blockSize values will get sent to us again when our prepareToPlay()
-   // method is called before playback begins.
    this->setPlayConfigDetails(inputChannelCount, outputChannelCount, 0, 0);
 }
 
@@ -55,7 +48,7 @@ void PassthroughProcessor::releaseResources()
 
 }
 
-void PassthroughProcessor::processBlock(AudioSampleBuffer& buffer, MidiBuffer& midiMessages)
+void PassthroughProcessor::processBlock(AudioBuffer<float>& buffer, MidiBuffer& midiMessages)
 {
 
 }
@@ -167,6 +160,12 @@ void PassthroughProcessor::setStateInformation(const void* data, int sizeInBytes
 
 }
 
+bool PassthroughProcessor::supportDoublePrecisionProcessing() const
+{
+    return false;
+}
 
-
-
+double PassthroughProcessor::getTailLengthSeconds() const
+{
+    return 0;
+}

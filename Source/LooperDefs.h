@@ -10,11 +10,6 @@
 
 #pragma once
 
-enum class LooperResult {
-    Success,
-    Failure
-};
-
 // this needs to be in sync with Arduino code to work correctly,
 // so if you ever change Arduino code check this
 enum ButtonMidiNotes: int {
@@ -29,12 +24,4 @@ enum ButtonMidiNotes: int {
     Track4 = 77
 };
 
-enum class LoopStates { Play, Mute, Record, Overdub, PlayInRecord };
-
-typedef uint32 NodeId;
-
-enum Node: NodeId {
-    InvalidNode = 0,
-    Input = 0xffffffff,
-    Output = 0xfffffffe
-};
+enum class LoopStates { Play, Record, Overdub, PlayInRecord };

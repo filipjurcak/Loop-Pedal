@@ -12,14 +12,14 @@
 #include <math.h>
 #include "LooperDefs.h"
 #include "Track.h"
+#include "Gain.h"
+#include "Passthrough.h"
 
-typedef AudioProcessorGraph::NodeID NodeID;
+using Connection = AudioProcessorGraph::Connection;
+using AudioGraphIOProcessor = AudioProcessorGraph::AudioGraphIOProcessor;
+using Node = AudioProcessorGraph::Node;
 
-//#include "Gain.h"
-//#include "Passthrough.h"
 //#include "SampleCounter.h"
-
-
 
 float DbToFloat(float db) {
    return pow(10.0, db/20.0);
@@ -30,18 +30,31 @@ float GainToDb(float gain) {
 }
 
 
-Looper::Looper(AudioDeviceManager& deviceManager, int numOfTracks): deviceManager(deviceManager)
+Looper::Looper(AudioDeviceManager& deviceManager, int numOfTracks): graph(new AudioProcessorGraph()), deviceManager(deviceManager)
 {
-    this->StartProcessing();
-    this->Reset();
-    this->SetOutputVolume(outputVolume);
+    graph->enableAllBuses();
+    graph->clear();
+    deviceManager.addAudioCallback(&player);
+
+    // Create and add new input/output processor nodes.
+    inputNode = graph->addNode(std::make_unique<AudioGraphIOProcessor> (AudioGraphIOProcessor::audioInputNode));
+    outputNode = graph->addNode(std::make_unique<AudioGraphIOProcessor> (AudioGraphIOProcessor::audioOutputNode));
+    this->Connect(this->inputNode, this->outputNode);
+    
+    // Add the processor that counts samples for us
+    //   fSampleCount = new SampleCounterProcessor(this, 5000);
+    //   fSampleCount->addChangeListener(this);
+    //   fSampleCountNode = this->AddProcessor(fSampleCount);
+    //   this->Connect(inputNode, fSampleCountNode);
+    
+    player.setProcessor(graph.get());
+
     for (int i = 0; i < numOfTracks; i++) {
         this->tracks.add(new Track(this, this->trackNames[i], this->selectedTrack == i));
     }
     auto midiInputs = MidiInput::getAvailableDevices();
     for (auto midiInput: midiInputs) {
         if (midiInput.name.startsWith("Arduino")) {
-            Logger::writeToLog("Arduino found.");
             this->setMidiInput(midiInputs.indexOf(midiInput));
         }
     }
@@ -49,39 +62,11 @@ Looper::Looper(AudioDeviceManager& deviceManager, int numOfTracks): deviceManage
 
 Looper::~Looper()
 {
-//    this->removeAllChangeListeners();
-    this->StopProcessing();
-    this->graph.clear();
-//    deviceManager.removeMidiInputDeviceCallback (MidiInput::getAvailableDevices()[lastInputIndex].identifier, this);
-}
-
-
-LooperResult Looper::StartProcessing()
-{
-//   LooperResult retval = LooperResult::kAlreadyStarted;
-//   if (!fProcessing)
-//   {
-//      fPlayer.setProcessor(&fGraph);
-//      fDeviceManager.addAudioCallback(&fPlayer);
-//      fProcessing = true;
-//   }
-//   return retval;
-    return LooperResult::Success;
-}
-
-
-LooperResult Looper::StopProcessing()
-{
-//   tk::Result retval = tk::kAlreadyStopped;
-//   if (fProcessing)
-//   {
-//      fDeviceManager.removeAudioCallback(&fPlayer);
-//      fPlayer.setProcessor(nullptr);
-//      fProcessing = false;
-//      retval = tk::kSuccess;
-//   }
-//   return retval;
-    return LooperResult::Success;
+    this->removeAllChangeListeners();
+    this->deviceManager.removeAudioCallback(&player);
+    this->player.setProcessor(nullptr);
+    this->graph->clear();
+    this->deviceManager.removeMidiInputDeviceCallback (MidiInput::getAvailableDevices()[lastMidiInputIndex].identifier, this);
 }
 
 //void Looper::changeListenerCallback(ChangeBroadcaster* source)
@@ -96,90 +81,6 @@ LooperResult Looper::StopProcessing()
 ////   }
 //}
 
-void Looper::TogglePlay()
-{
-   if (this->playing)
-   {
-      this->Pause();
-   }
-   else
-   {
-      this->Play();
-   }
-   // std::cout << "Scumbler::TogglePlay->sendChangeMessage" << std::endl;
-//   this->sendChangeMessage();
-
-}
-
-bool Looper::IsPlaying() const
-{
-   return playing;
-}
-
-bool Looper::UpdateTime()
-{
-   bool retval = timeUpdate;
-   timeUpdate = false;
-   return retval;
-}
-
-
-void Looper::Reset(bool addFirstTrack)
-{
-    this->Pause();
-
-    // clear out the processor graph
-    graph.clear();
-
-    // Create and add new input/output processor nodes.
-    // TODO check how to free them correctly
-//    AudioProcessorGraph::AudioGraphIOProcessor* in = new AudioProcessorGraph::AudioGraphIOProcessor(
-//      AudioProcessorGraph::AudioGraphIOProcessor::audioInputNode);
-//    inputNode = this->AddProcessor(in);
-//
-//    AudioProcessorGraph::AudioGraphIOProcessor* out = new AudioProcessorGraph::AudioGraphIOProcessor(AudioProcessorGraph::AudioGraphIOProcessor::audioOutputNode);
-//    outputNode = this->AddProcessor(out);
-//
-//    this->Connect(inputNode, outputNode);
-
-   // connect a gain processor in the middle:
-//   GainProcessor* gain = new GainProcessor(nullptr, 2);
-//   NodeId gainNode = this->AddProcessor(gain);
-//   if (tk::kSuccess == this->InsertBetween(fInputNode, gainNode, fOutputNode))
-//   {
-//      fOutputGain = gain;
-//      fGainNode = gainNode;
-
-//   }
-//   else
-//   {
-//      outputGain = nullptr;
-      gainNode = NodeId(Node::InvalidNode);
-//   }
-
-   // Add the processor that counts samples for us
-//   fSampleCount = new SampleCounterProcessor(this, 5000);
-//   fSampleCount->addChangeListener(this);
-//   fSampleCountNode = this->AddProcessor(fSampleCount);
-//   this->Connect(fInputNode, fSampleCountNode);
-
-
-   // Delete any tracks that we have, returning to zero tracks.
-//   fTracks.clear();
-//
-//   if (addFirstTrack)
-//   {
-//      // ... and then add a single track to start out.
-//      this->AddTrack();
-//      // (and make sure it's active so it receives input!)
-//      this->ActivateTrack(0);
-//   }
-//   // let anyone listening tk::know that we've changed.
-//   // std::cout << "Scumbler::Reset->sendChangeMessage" << std::endl;
-//   this->sendChangeMessage();
-
-}
-
 int Looper::GetNumberOfTracks()
 {
     return tracks.size();
@@ -190,149 +91,138 @@ LoopStates Looper::GetMode() const
     return this->mode;
 }
 
-int Looper::GetSelectedTrack() const
+bool Looper::IsGlobalMuteOn() const
 {
-    return this->selectedTrack;
+    return globalMute;
 }
 
-void Looper::SetOutputVolume(float volumeInDb)
+Track* Looper::GetSelectedTrack() const
 {
-   if (volumeInDb != outputVolume)
-   {
-      outputVolume = volumeInDb;
-
-      //!!! Send the new gain to the audio processor that actually controls
-      // the output.
-      float gain = DbToFloat(outputVolume);
-//      outputGain->SetGain(gain);
-   }
+    return this->tracks[this->selectedTrack];
 }
 
-float Looper::GetOutputVolume() const
+void Looper::Connect(Node::Ptr source, Node::Ptr dest)
 {
-   return outputVolume;
+   this->HandleConnection(source, dest, true);
 }
 
-uint64 Looper::GetSampleCount() const
+void Looper::Disconnect(Node::Ptr source, Node::Ptr dest)
 {
-//   return fSampleCount->GetSampleCount();
-    return 0;
+    this->HandleConnection(source, dest, false);
 }
 
-LooperResult Looper::Connect(NodeId source, NodeId dest)
+void Looper::HandleConnection(Node::Ptr source, Node::Ptr dest, bool connecting)
 {
-   return this->HandleConnection(source, dest, true);
-}
-
-LooperResult Looper::Disconnect(NodeId source, NodeId dest)
-{
-   return this->HandleConnection(source, dest, false);
-}
-
-
-LooperResult Looper::InsertBetween(NodeId before, NodeId newNode, NodeId after, bool disconnect)
-{
-    LooperResult retval = LooperResult::Failure;
-
-    NodeID beforeNode = NodeID(this->HandleSpecialNode(before));
-    NodeID afterNode = NodeID(this->HandleSpecialNode(after));
-    NodeID newNodeNode = NodeID(newNode);
-
-    if (disconnect)
+    // only proceed if those nodes exist.
+    if (source && dest)
     {
-        // 1: we can't succeed of before and after aren't connected.
-        if (!graph.isConnected(beforeNode, afterNode))
+        if (connecting)
         {
-            return LooperResult::Failure;
+            // if they're already connected, there's nothing to do.
+            if (graph->isConnected(source->nodeID, dest->nodeID))
+            {
+                return;
+            }
+            // verify that we can at least connect the lower channels of these nodes.
+            if (!graph->canConnect({ { source->nodeID, 0 }, { dest->nodeID, 0 } }))
+            {
+                Logger::writeToLog("Nodes with IDs " + String(source->nodeID.uid) + " and " + String(dest->nodeID.uid) + " can't be connected");
+                exit(1);
+            }
+        }
+        else
+        {
+            // bail out early if the two nodes aren't connected.
+            if (!graph->isConnected(source->nodeID, dest->nodeID))
+            {
+                Logger::writeToLog("Nodes with IDs " + String(source->nodeID.uid) + " and " + String(dest->nodeID.uid) + " are not connected");
+                exit(1);
+            }
+        }
+
+        AudioProcessor* srcFilter = source->getProcessor();
+        int numSrcChannels = srcFilter->getTotalNumOutputChannels();
+        AudioProcessor* destFilter = dest->getProcessor();
+        int numDestChannels = destFilter->getTotalNumInputChannels();
+        // in our immediate situation, we're only interested in 2 channels at most.
+        // Future versions might be interested in more.
+        if (numSrcChannels == numDestChannels)
+        {
+            for (int index = 0; index < numSrcChannels; index++)
+            {
+                Connection connection = { { source->nodeID, index }, { dest->nodeID, index } };
+                if (connecting) {
+                    graph->addConnection(connection);
+                } else {
+                    graph->removeConnection(connection);
+                }
+            }
+        }
+        else if (numSrcChannels < numDestChannels)
+        {
+            // connect the single input to both pins of the destination filter
+            for (int index = 0; index < numDestChannels; index++) {
+                Connection connection = { { source->nodeID, 0 }, { dest->nodeID, index } };
+                if (connecting) {
+                    graph->addConnection(connection);
+                } else {
+                    graph->removeConnection(connection);
+                }
+            }
+        }
+        else // numSrcChannels > numDestChannels
+        {
+            // connect both source pins to the single pin of the dest filter.
+            for (int index = 0; index < numSrcChannels; index++) {
+                Connection connection = { { source->nodeID, index }, { dest->nodeID, 0 } };
+                if (connecting) {
+                    graph->addConnection(connection);
+                } else {
+                    graph->removeConnection(connection);
+                }
+            }
         }
     }
+    else
+    {
+        Logger::writeToLog("Something went wrong when (dis)connecting nodes with IDs " + String(source->nodeID.uid) + " and " + String(dest->nodeID.uid));
+        exit(1);
+    }
+}
+
+void Looper::InsertBetween(Node::Ptr before, Node::Ptr newNode, Node::Ptr after)
+{
     // the new connections both need to be legal before we start messing with things.
-//    if (!graph.canConnect(beforeNode, NodeID(0), newNodeNode, NodeID(0)) ||
-//        !graph.canConnect(newNodeNode, NodeID(0), afterNode, NodeID(0)))
-//    {
-//        return LooperResult::Failure;
-//    }
-//   //  first, disconnect the two nodes that are already being connected.
-//   retval = disconnect ? this->Disconnect(before, after) : tk::kSuccess;
-//   if (tk::kSuccess == retval)
-//   {
-//      retval = this->Connect(before, newNode);
-//      if (tk::kSuccess == retval)
-//      {
-//         retval = this->Connect(newNode, after);
-//      }
-//   }
+    if (!graph->canConnect({ { before->nodeID, 0 }, { newNode->nodeID, 0 } }) ||
+        !graph->canConnect({ { newNode->nodeID, 0 }, { after->nodeID, 0 } }))
+    {
+        Logger::writeToLog("I can't insert node with ID " + String(newNode->nodeID.uid) + " between nodes with IDs " + String(before->nodeID.uid) + " and " + String(after->nodeID.uid));
+        exit(1);
+    }
+    
+    // disconnect the two nodes if they are already connected, but not disconnect input and output nodes
+    if (graph->isConnected(before->nodeID, after->nodeID) and (before != inputNode or after != outputNode))
+    {
+        std::cout << "Rozpajam node-y s IDs " << before->nodeID.uid << " a " << after->nodeID.uid << "\n";
+        this->Disconnect(before, after);
+    }
 
-   return retval;
+    this->Connect(before, newNode);
+    this->Connect(newNode, after);
 }
 
-
-
-LooperResult Looper::RemoveBetween(NodeId before, NodeId nodeToRemove,
-   NodeId after, bool deleteNode, bool reconnect)
+Node::Ptr Looper::GetInputNode() const
 {
-   LooperResult retval = LooperResult::Failure;
-
-   // if needed, look up the node ids for the input/output nodes.
-//   before = this->HandleSpecialNode(before);
-//   after = this->HandleSpecialNode(after);
-//
-//   // 1. First pre-condition: before must already be connected to nTR, and
-//   // nTR must be connected to after.
-//   if (! (graph.isConnected(before, nodeToRemove) &&
-//          graph.isConnected(nodeToRemove, after)))
-//   {
-//      return LooperResult::Failure;
-//   }
-//
-//   // 2. Next precondition: The connection between `before` and `after` needs
-//   // to be a legal connection. I don't think this one is possible if we assume
-//   // that all graphs start out connecting input->output and are after that only
-//   // added to with the InsertBetween() method.
-//   if (!graph.canConnect(before, 0, after, 0))
-//   {
-//      return LooperResult::Failure;
-//   }
-//
-//   // 3. Disconnect `nodeToRemove on either side.
-//   retval = this->Disconnect(before, nodeToRemove);
-//   if (LooperResult::Success == retval)
-//   {
-//      retval = this->Disconnect(nodeToRemove, after);
-//      if (LooperResult::Success == retval)
-//      {
-//         if (reconnect)
-//         {
-//            // 4. Re-connect the before and after nodes, as if the nodeToRemove had
-//            // never been there.
-//            retval = this->Connect(before, after);
-//         }
-//         if (deleteNode)
-//         {
-//            graph.removeNode(nodeToRemove);
-//         }
-//      }
-//   }
-
-   return retval;
+    return inputNode;
 }
 
-
-void Looper::Play()
+Node::Ptr Looper::GetOutputNode() const
 {
-   if (!playing)
-   {
-      playing = true;
-   }
+    return outputNode;
 }
 
-void Looper::Pause()
-{
-   if (playing)
-   {
-      playing = false;
-      // !!! TODO
-   }
+Node::Ptr Looper::AddProcessor(std::unique_ptr<AudioProcessor> processor) {
+    return graph->addNode(std::move(processor));
 }
 
 void Looper::ChangeMode(LoopStates mode)
@@ -347,331 +237,183 @@ void Looper::ChangeSelectedTrack(int index)
     this->tracks[this->selectedTrack]->UnselectTrack();
     this->selectedTrack = index;
     this->tracks[this->selectedTrack]->SelectTrack();
+    this->sendChangeMessage();
 }
 
-LooperResult Looper::ResetAllTracks()
+void Looper::ResetAllTracks()
 {
-//   for (int i = 0; i < this->GetNumTracks(); ++i)
-//   {
-//      Track* t = this->GetTrack(i);
-//      t->ResetLoop();
-//   }
-//   // set the sample count back to zero.
+    for (int i = 0; i < this->tracks.size(); i++)
+    {
+       this->tracks[i]->ResetLoop(true);
+    }
+    this->ChangeSelectedTrack(0);
+    this->wasRecorded = false;
+    
+    this->ChangeMode(LoopStates::PlayInRecord);
+   // set the sample count back to zero.
 //   fSampleCount->Reset();
-   return LooperResult::Success;
-
 }
 
-LooperResult Looper::SeekAllTracksAbsolute(int loopPos)
+void Looper::PlayAllTracks()
 {
-//   for (int i = 0; i < this->GetNumTracks(); ++i)
-//   {
-//      Track* t = this->GetTrack(i);
-//      t->SeekAbsolute(loopPos);
-//   }
+    for (auto track: this->tracks)
+    {
+        globalMute = false;
+        track->PlayFromBeginning();
+    }
+}
 
-   return LooperResult::Success;
-
+void Looper::StopAllTracks()
+{
+    globalMute = true;
+    this->sendChangeMessage();
 }
 
 Track* Looper::GetTrack(int index) const
 {
-   // if index is out of range (or if the array is legitimately holding a
-   // nullptr), this will return nullptr;
+   // if index is out of range (or if the array is legitimately holding a nullptr), this will return nullptr;
    return tracks[index];
 }
 
-
-LooperResult Looper::HandleConnection(NodeId source, NodeId dest, bool connecting)
-{
-   LooperResult retval = LooperResult::Failure;
-   fnPtr op = nullptr;
-
-//   AudioProcessorGraph::Node* srcNode  = graph.getNodeForId(source);
-//   AudioProcessorGraph::Node* destNode = graph.getNodeForId(dest);
-//   // only proceed if those nodes exist.
-//   if (srcNode && destNode)
-//   {
-//      if (connecting)
-//      {
-//         op = &AudioProcessorGraph::addConnection;
-//         // if they're already connected, there's nothing to do.
-//         if (fGraph.isConnected(source, dest))
-//         {
-//            return tk::kAlreadyConnected;
-//         }
-//         // verify that we can at least connect the lower channels of these nodes.
-//         if (!fGraph.canConnect(source, 0, dest, 0))
-//         {
-//            return tk::kIllegalConnection;
-//         }
-//
-//      }
-//      else
-//      {
-//         op = &AudioProcessorGraph::removeConnection;
-//         // bail out early if the two nodes aren't connected.
-//         if (!fGraph.isConnected(source, dest))
-//         {
-//            return tk::kNotConnected;
-//         }
-//      }
-//
-//      retval = tk::kSuccess;
-//      AudioProcessor* srcFilter  = srcNode->getProcessor();
-//      int numSrcChannels         = srcFilter->getNumOutputChannels();
-//      AudioProcessor* destFilter = destNode->getProcessor();
-//      int numDestChannels        = destFilter->getNumInputChannels();
-//      // in our immediate situation, we're only interested in 2 channels at most.
-//      // Future versions might be interested in more.
-//      // !!! NOTE that a better way to do this is to instead check whether
-//      // isInputChannelStereoPair/isOutputChannelStereoPair() is true and to
-//      // hook things up accordingly.
-//      if (numSrcChannels == numDestChannels)
-//      {
-//         for (int index = 0; index < numSrcChannels; ++index)
-//         {
-//            mCallMemberFn(fGraph, op)(source, index, dest, index);
-//         }
-//
-//      }
-//      else if (numSrcChannels < numDestChannels)
-//      {
-//         // connect the single input to both pins of the destination filter
-//         mCallMemberFn(fGraph, op)(source, 0, dest, 0);
-//         mCallMemberFn(fGraph, op)(source, 0, dest, 1);
-//      }
-//      else // numSrcChannels > numDestChannels
-//      {
-//         // connect both source pins to the single pin of the dest filter.
-//         mCallMemberFn(fGraph, op)(source, 0, dest, 0);
-//         mCallMemberFn(fGraph, op)(source, 1, dest, 0);
-//      }
-//   }
-//   else
-//   {
-//      // one or other of the requested nodes aren't present in the graph.
-//      if (nullptr == srcNode)
-//      {
-//         return tk::kNoSourceNode;
-//      }
-//      if (nullptr == destNode)
-//      {
-//         return tk::kNoDestNode;
-//      }
-//   }
-   return retval;
-}
-
-NodeId Looper::AddProcessor(AudioProcessor* p)
-{
-   AudioProcessorGraph::Node* node;
-//   node = graph.addNode(p);
-//   return node->nodeId;
-    return NodeId(0);
-}
-
-LooperResult Looper::DeleteNode(NodeId node)
-{
-    LooperResult retval = LooperResult::Failure;
-    if (graph.removeNode(NodeID(node)))
-    {
-        retval = LooperResult::Success;
-    }
-    return retval;
-}
-
-
-AudioProcessorEditor* Looper::GetEditorForNode(NodeId node, bool useGeneric)
-{
-   AudioProcessorEditor* retval = nullptr;
-   AudioProcessorGraph::Node* plugin = graph.getNodeForId(NodeID(node));
-   if (nullptr != plugin)
-   {
-      if (!useGeneric)
-      {
-         retval = plugin->getProcessor()->createEditorIfNeeded();
-         if (nullptr == retval)
-         {
-            // we failed to create a native editor, so fall back to the generic.
-            useGeneric = true;
-         }
-      }
-      if (useGeneric)
-      {
-         retval = new GenericAudioProcessorEditor(plugin->getProcessor());
-      }
-
-   }
-   return retval;
-}
-
-
-LooperResult Looper::GetStateInformationForNode(NodeId nodeId, MemoryBlock& m)
-{
-   LooperResult retval = LooperResult::Failure;
-   AudioProcessorGraph::Node* node = graph.getNodeForId(NodeID(nodeId));
-   if (nullptr != node)
-   {
-      // get the actual processor object behind this node, and have
-      // it stuff its state data into the memory block that we've been passed.
-      AudioProcessor* processor = node->getProcessor();
-      processor->getStateInformation(m);
-      retval = LooperResult::Success;
-   }
-
-   return retval;
-}
-
-LooperResult Looper::SetStateInformationForNode(NodeId nodeId, MemoryBlock& m)
-{
-   LooperResult retval = LooperResult::Failure;
-   AudioProcessorGraph::Node* node = graph.getNodeForId(NodeID(nodeId));
-   if (nullptr != node)
-   {
-      // get the actual processor object behind this node, and have
-      // it restore its state from the passed in memory block.
-      AudioProcessor* processor = node->getProcessor();
-      processor->setStateInformation(m.getData(), (int) m.getSize());
-      retval = LooperResult::Success;
-   }
-
-   return retval;
-}
-
-
-NodeId Looper::HandleSpecialNode(NodeId node) {
-   NodeId retval = node;
-   if (Node::Input == node) {
-      retval = inputNode;
-   } else if (Node::Output == node) {
-      // if we have inserted a gain processor before the output, that should
-      // be treated as the output; everything goes through it.
-      retval = (gainNode == Node::InvalidNode)  ? outputNode : gainNode;
-   }
-
-   return retval;
-}
-
-void Looper::setMidiInput (int index) {
+void Looper::setMidiInput(int index) {
     auto list = MidiInput::getAvailableDevices();
-    deviceManager.removeMidiInputDeviceCallback(list[lastInputIndex].identifier, this);
+    deviceManager.removeMidiInputDeviceCallback(list[lastMidiInputIndex].identifier, this);
     auto newInput = list[index];
     if (! deviceManager.isMidiInputDeviceEnabled (newInput.identifier)) {
         deviceManager.setMidiInputDeviceEnabled (newInput.identifier, true);
     }
 
     deviceManager.addMidiInputDeviceCallback (newInput.identifier, this);
-
-    lastInputIndex = index;
+    lastMidiInputIndex = index;
 }
 
 void Looper::handleIncomingMidiMessage(MidiInput *source, const MidiMessage& message) {
     if (message.isNoteOn()) {
         int noteNumber = message.getNoteNumber();
 
-        if (noteNumber == ButtonMidiNotes::Undo) {
+        if (noteNumber == ButtonMidiNotes::Undo)
+        {
+            // TODO
             Logger::writeToLog("Undo on track " + String(this->selectedTrack + 1));
         }
 
-        if (this->mode == LoopStates::Play) {
-            if (noteNumber == ButtonMidiNotes::Recplay) {
-                Logger::writeToLog("Play All");
-            } else if (noteNumber == ButtonMidiNotes::Stop) {
-                Logger::writeToLog("Stop All");
-            } else if (noteNumber == ButtonMidiNotes::Mode) {
+        if (this->mode == LoopStates::Play)
+        {
+            if (noteNumber == ButtonMidiNotes::Recplay)
+            {
+                this->PlayAllTracks();
+            }
+            else if (noteNumber == ButtonMidiNotes::Stop)
+            {
+                this->StopAllTracks();
+            }
+            else if (noteNumber == ButtonMidiNotes::Mode)
+            {
                 this->ChangeMode(LoopStates::PlayInRecord);
-                Logger::writeToLog("Record mode - play in record");
-            } else if (noteNumber == ButtonMidiNotes::Clear) {
-                Logger::writeToLog("Clear All");
-            } else if (ButtonMidiNotes::Track1 <= noteNumber && noteNumber <= ButtonMidiNotes::Track4) {  // one of the tracks pressed
+            }
+            else if (noteNumber == ButtonMidiNotes::Clear)
+            {
+                this->ResetAllTracks();
+            }
+            else if (ButtonMidiNotes::Track1 <= noteNumber && noteNumber <= ButtonMidiNotes::Track4) {  // one of the tracks pressed
                 int firstTrackIndex = ButtonMidiNotes::Track1;
                 int trackIndex = noteNumber - firstTrackIndex;
-                this->tracks[trackIndex]->MuteUnmute();
-                if (this->tracks[trackIndex]->IsMuted()) {
-                    Logger::writeToLog("Mute Track " + String(trackIndex + 1));
-                } else {
-                    Logger::writeToLog("Play Track " + String(trackIndex + 1));
+                if (this->tracks[trackIndex]->IsMuted())
+                {
+                    this->tracks[trackIndex]->Mute(false);
+                }
+                else
+                {
+                    this->tracks[trackIndex]->Mute(true);
                 }
             }
-        } else {
-            if (noteNumber == ButtonMidiNotes::Recplay) {
-                if (this->mode == LoopStates::PlayInRecord) {
-                    if (!wasRecorded) {
+        }
+        else
+        {
+            if (noteNumber == ButtonMidiNotes::Recplay)
+            {
+                if (this->mode == LoopStates::PlayInRecord)
+                {
+                    if (!wasRecorded)
+                    {
                         this->startLoopingTime = Time::getMillisecondCounterHiRes() * 0.001;
-                        Logger::writeToLog("Record on Track " + String(this->selectedTrack + 1));
                         this->ChangeMode(LoopStates::Record);
-                    } else {
-                        this->ChangeMode(LoopStates::Overdub);
-                        Logger::writeToLog("Overdubbing on Track " + String(this->selectedTrack + 1) + " after play in record");
                     }
-                } else if (this->mode == LoopStates::Record) {
-                    if (!this->wasRecorded) {
+                    else
+                    {
+                        this->ChangeMode(LoopStates::Overdub);
+                    }
+                }
+                else if (this->mode == LoopStates::Record)
+                {
+                    if (!this->wasRecorded)
+                    {
                         this->loopTime = Time::getMillisecondCounterHiRes() * 0.001 - startLoopingTime;
-                        for (int i = 0; i < this->tracks.size(); i++) {
-                            this->tracks[i]->SetLoopDuration(this->loopTime);
+                        for (int i = 0; i < this->tracks.size(); i++)
+                        {
+                            this->tracks[i]->SetLoopDuration(int(this->loopTime * 1000));
                         }
                         Logger::writeToLog("Loop time is " + String(this->loopTime));
                         this->wasRecorded = true;
-                        Logger::writeToLog("Overdub after first recording");
-                    } else {
-                        Logger::writeToLog("Overdub after play in record");
                     }
                     this->ChangeMode(LoopStates::Overdub);
-                } else if (this->mode == LoopStates::Overdub) {
+                }
+                else if (this->mode == LoopStates::Overdub)
+                {
                     this->ChangeMode(LoopStates::PlayInRecord);
-                    Logger::writeToLog("Play in record");
                 }
-            } else if (noteNumber == ButtonMidiNotes::Mode) {
+            }
+            else if (noteNumber == ButtonMidiNotes::Mode)
+            {
                 this->ChangeMode(LoopStates::Play);
-                Logger::writeToLog("Play Mode");
-            } else if (noteNumber == ButtonMidiNotes::Stop) {
-                this->tracks[this->selectedTrack]->MuteUnmute();
-                if (this->tracks[this->selectedTrack]->IsMuted()) {
-                    Logger::writeToLog("Muting Track " + String(this->selectedTrack + 1) + " during recording");
-                } else {
-                    Logger::writeToLog("Unmuting Track " + String(this->selectedTrack + 1) + " during recording");
+            }
+            else if (noteNumber == ButtonMidiNotes::Stop)
+            {
+                if (this->tracks[this->selectedTrack]->IsMuted())
+                {
+                    this->tracks[this->selectedTrack]->Mute(false);
                 }
-            } else if (noteNumber == ButtonMidiNotes::Clear) {
-                Logger::writeToLog("Clear track " + String(this->selectedTrack + 1));
-//                this->tracks[this->selectedTrack]->sendChangeMessage();
-            } else if (ButtonMidiNotes::Track1 <= noteNumber && noteNumber <= ButtonMidiNotes::Track4) {  // one of the tracks pressed
+                else
+                {
+                    this->tracks[this->selectedTrack]->Mute(true);
+                }
+            }
+            else if (noteNumber == ButtonMidiNotes::Clear)
+            {
+                this->tracks[this->selectedTrack]->ResetLoop(false);
+            }
+            else if (ButtonMidiNotes::Track1 <= noteNumber && noteNumber <= ButtonMidiNotes::Track4) {  // one of the tracks pressed
                 int previousSelectedTrack = this->selectedTrack;
                 int firstTrackIndex = ButtonMidiNotes::Track1;
                 int selectedTrack = noteNumber - firstTrackIndex;
                 this->ChangeSelectedTrack(selectedTrack);
-                if (this->mode == LoopStates::Record) {
-                    if (!this->wasRecorded) {
+                if (this->mode == LoopStates::Record)
+                {
+                    if (!this->wasRecorded)
+                    {
                         this->loopTime = Time::getMillisecondCounterHiRes() * 0.001 - startLoopingTime;
-                        for (int i = 0; i < this->tracks.size(); i++) {
-                            this->tracks[i]->SetLoopDuration(this->loopTime);
+                        for (int i = 0; i < this->tracks.size(); i++)
+                        {
+                            this->tracks[i]->SetLoopDuration(int(this->loopTime * 1000));
                         }
                         Logger::writeToLog("Loop time is " + String(this->loopTime));
                         this->wasRecorded = true;
-                        if (previousSelectedTrack == this->selectedTrack) {
-                            Logger::writeToLog("Overdub after first recording");
-                        } else {
-                            Logger::writeToLog("Changing record to overdub from track " + String(previousSelectedTrack + 1) + " to Track " + String(this->selectedTrack + 1));
-                        }
-                    } else if (previousSelectedTrack != this->selectedTrack) {
-                        Logger::writeToLog("Changing record to overdub from track " + String(previousSelectedTrack + 1) + " to Track " + String(this->selectedTrack + 1));
-                    } else {
-                        Logger::writeToLog("Changing record to overdub");
                     }
                     this->ChangeMode(LoopStates::Overdub);
-                } else if (this->mode == LoopStates::Overdub) {
-                    if (previousSelectedTrack == this->selectedTrack) {
+                }
+                else if (this->mode == LoopStates::Overdub)
+                {
+                    if (previousSelectedTrack == this->selectedTrack)
+                    {
                         this->ChangeMode(LoopStates::PlayInRecord);
-                        Logger::writeToLog("Changing to Play In Record on Track " + String(this->selectedTrack + 1));
-                    } else {
-                        Logger::writeToLog("Overdub to Track " + String(this->selectedTrack + 1) + " from Track " + String(previousSelectedTrack + 1));
                     }
-                } else {
-                    Logger::writeToLog("Selected Track " + String(this->selectedTrack + 1));
                 }
             }
         }
-    } else {
+    }
+    else
+    {
         Logger::writeToLog("Unsupported MIDI note command with note " + String(message.getNoteNumber()));
+        exit(1);
     }
 }

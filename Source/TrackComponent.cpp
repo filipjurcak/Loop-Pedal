@@ -27,7 +27,7 @@
 //[/MiscUserDefs]
 
 //==============================================================================
-TrackComponent::TrackComponent (Track* track, const LoopStates loopState)
+TrackComponent::TrackComponent (Track* track, LoopStates loopState)
     : track(track), loopState(loopState)
 {
     //[Constructor_pre] You can add your own custom stuff here..
@@ -41,10 +41,10 @@ TrackComponent::TrackComponent (Track* track, const LoopStates loopState)
 
 
     //[Constructor] You can add your own custom stuff here..
-    this->track->addChangeListener(this);
-    this->label.setText(this->track->GetName(), NotificationType::dontSendNotification);
-    this->label.setJustificationType(Justification::centred);
-    this->label.setFont(Font (30.0f, Font::bold));
+    track->addChangeListener(this);
+    label.setText(this->track->GetName(), NotificationType::dontSendNotification);
+    label.setJustificationType(Justification::centred);
+    label.setFont(Font (30.0f, Font::bold));
     addAndMakeVisible(this->label);
 //    addAndMakeVisible(viewport);
     //[/Constructor]
@@ -70,23 +70,40 @@ void TrackComponent::paint (Graphics& g)
     g.fillAll (Colours::black);
 
     //[UserPaint] Add your own custom painting code here..
-    if ((this->loopState == LoopStates::Play && !this->track->IsMuted()) ||
-        (this->loopState != LoopStates::Play && this->track->IsSelected())) {
-        if (this->loopState == LoopStates::Play && !this->track->IsMuted()) {
-            g.setColour(Colours::green);
-        } else if (this->loopState == LoopStates::Record || this->loopState == LoopStates::Overdub) {
+    if ((loopState == LoopStates::Play && !track->IsMuted() && !track->IsGlobalMuteOn()) ||
+        (loopState != LoopStates::Play && track->IsSelected())) {
+        if (loopState == LoopStates::Play && (!track->IsMuted() && !track->IsGlobalMuteOn())) {
+            g.setColour(Colours::limegreen);
+        } else if (loopState == LoopStates::Record || loopState == LoopStates::Overdub) {
             g.setColour(Colours::red);
-        } else if (this->loopState == LoopStates::PlayInRecord) {
+        } else if (loopState == LoopStates::PlayInRecord) {
             g.setColour(Colours::orange);
         }
-        g.fillEllipse((getWidth()) / 2 - ledSize / 2, getHeight() - this->labelSize - this->ledSize - 20, this->ledSize, this->ledSize);
+        g.fillEllipse((getWidth()) / 2 - ledSize / 2, getHeight() - labelSize - ledSize - 20, ledSize, ledSize);
     }
 
-    if (this->track->IsSelected()) {
+    if (track->IsSelected()) {
         g.setColour (Colours::white);
         auto centralArea = getLocalBounds().toFloat().reduced(10.0f);
         g.drawRoundedRectangle (centralArea, 5.0f, 7.0f);
     }
+    
+    g.setColour(Colours::black);
+    auto viewport = getLocalBounds().toFloat().reduced(15.0f);
+    viewport.removeFromBottom(labelSize + ledSize + 15.0f);
+    g.fillRect(viewport);
+    if (track->IsMuted() || track->IsGlobalMuteOn())
+    {
+        g.setColour(Colours::grey);
+    }
+    else
+    {
+        g.setColour(Colours::limegreen);
+    }
+//    float magnitude = track->GetLoopProcessor()->GetMagnitude();
+//    auto height = viewport.getHeight() * magnitude;
+//    auto content = viewport.removeFromBottom(height);
+//    g.fillRect(content);
     //[/UserPaint]
 }
 
@@ -106,7 +123,10 @@ void TrackComponent::resized()
 void TrackComponent::changeListenerCallback(ChangeBroadcaster* source)
 {
 //    Logger::writeToLog("TrackComponent sa chce updatnut!!!");
-    this->repaint();
+    if (source == track)
+    {
+        this->repaint();
+    }
 }
 
 void TrackComponent::changeLoopState(const LoopStates loopState) {
@@ -126,10 +146,10 @@ void TrackComponent::changeLoopState(const LoopStates loopState) {
 BEGIN_JUCER_METADATA
 
 <JUCER_COMPONENT documentType="Component" className="TrackComponent" componentName=""
-                 parentClasses="public Component" constructorParams="Track* track"
-                 variableInitialisers="track(track)" snapPixels="8" snapActive="1"
-                 snapShown="1" overlayOpacity="0.330" fixedSize="0" initialWidth="400"
-                 initialHeight="800">
+                 parentClasses="public Component, public ChangeListener" constructorParams="Track* track, LoopStates loopState"
+                 variableInitialisers="track(track), loopState(loopState)" snapPixels="8"
+                 snapActive="1" snapShown="1" overlayOpacity="0.330" fixedSize="0"
+                 initialWidth="400" initialHeight="800">
   <BACKGROUND backgroundColour="ff000000"/>
 </JUCER_COMPONENT>
 

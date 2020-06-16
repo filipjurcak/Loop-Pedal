@@ -40,6 +40,7 @@ TracksComponent::TracksComponent (Looper* looper)
 
     setSize (1200, 800);
 
+
     //[Constructor] You can add your own custom stuff here..
     this->loopState = looper->GetMode();
     looper->addChangeListener(this);
@@ -100,7 +101,6 @@ void TracksComponent::changeListenerCallback(ChangeBroadcaster* source)
             this->loopState = looper->GetMode();
         }
     }
-    this->repaint();
 }
 //[/MiscUserCode]
 
@@ -115,7 +115,7 @@ void TracksComponent::changeListenerCallback(ChangeBroadcaster* source)
 BEGIN_JUCER_METADATA
 
 <JUCER_COMPONENT documentType="Component" className="TracksComponent" componentName=""
-                 parentClasses="public Component" constructorParams="Looper* looper"
+                 parentClasses="public Component, public ChangeListener" constructorParams="Looper* looper"
                  variableInitialisers="looper(looper)" snapPixels="8" snapActive="1"
                  snapShown="1" overlayOpacity="0.330" fixedSize="1" initialWidth="1200"
                  initialHeight="800">

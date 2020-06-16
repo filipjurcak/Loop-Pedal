@@ -34,11 +34,12 @@
     Describe your class and how it works here!
                                                                     //[/Comments]
 */
-class TrackComponent  : public Component, public ChangeListener
+class TrackComponent  : public Component,
+                        public ChangeListener
 {
 public:
     //==============================================================================
-    TrackComponent (Track* track, const LoopStates loopState);
+    TrackComponent (Track* track, LoopStates loopState);
     ~TrackComponent() override;
 
     //==============================================================================
@@ -57,7 +58,6 @@ private:
     Track* track;
     LoopStates loopState;
     Label label;
-//    Rectangle<float> viewport;
     int labelSize = 50;
     int ledSize = 40;
     //[/UserVariables]

@@ -35,7 +35,8 @@
     Describe your class and how it works here!
                                                                     //[/Comments]
 */
-class TracksComponent  : public Component, public ChangeListener
+class TracksComponent  : public Component,
+                         public ChangeListener
 {
 public:
     //==============================================================================

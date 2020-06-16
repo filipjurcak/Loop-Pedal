@@ -9,81 +9,54 @@
 */
 
 #include "Track.h"
+using Node = AudioProcessorGraph::Node;
 
 Track::Track(Looper* looper, const String& name, bool selected)
 : looper(looper)
 , name(name)
 , selected(selected)
-//,  fInputActive(false)
-//,  fInputGain(0.f)
-//,  fPan(0.5)
-//,  fPreEffectCount(preFxCount)
-//,  fPreEffects(nullptr)
-//,  fPostEffectCount(postFxCount)
-//,  fPostEffects(nullptr)
-//,  fLoop(nullptr)
-//,  fLoopId(tk::kInvalidNode)
-//,  fOutputGain(nullptr)
-//,  fVolumeId(tk::kInvalidNode)
-//,  fOutputVolume(0.0)
 {
-   // we need the input and output nodes that the Scumbler controls.
-   NodeId input = looper->HandleSpecialNode(Node::Input);
-   NodeId output = looper->HandleSpecialNode(Node::Output);
+    // we need the input and output nodes that the Scumbler controls.
+    Node::Ptr inputNode = looper->GetInputNode();
+    Node::Ptr outputNode = looper->GetOutputNode();
 
-   // create an insert the input processor
-//   fInputProcessor = new InputProcessor(this, 2);
-//   this->SetInputGain(fInputGain);
-//   this->SetInputPan(fPan);
-//   fInputId = fScumbler->AddProcessor(fInputProcessor);
-//
-//   bool disconnectInputAndOutput = (0 == Track::sTrackCount++);
-//
-//   fScumbler->InsertBetween(input, fInputId, output, disconnectInputAndOutput);
+    // create & insert the loop processor
+    std::unique_ptr<AudioProcessor> loopProcessor = std::make_unique<LoopProcessor>(this, 2);
+    auto loopNode = looper->AddProcessor(std::move(loopProcessor));
+    // this is ugly, but I don't know how to do it better yet
+    loop = dynamic_cast<LoopProcessor*>(loopNode->getProcessor());
+    looper->InsertBetween(inputNode, loopNode, outputNode);
+    
+//    auto inputGainNode = looper->AddProcessor(std::make_unique<GainProcessor>(this, 2, 0.0f));
+//    std::cout << "NodeID inputGainNode-u je " << inputGainNode->nodeID.uid << "\n";
+//    looper->InsertBetween(inputNode, inputGainNode, loopNode);
 
-
-   // create and insert the gain processor.
-//   fOutputGain = new GainProcessor(this, 2);
-//   fVolumeId = fScumbler->AddProcessor(fOutputGain);
-//   fScumbler->InsertBetween(fInputId, fVolumeId, output);
-//
-//   // create & insert the loop processor
-//   fLoop = new LoopProcessor(this, 2);
-//   fLoopId = fScumbler->AddProcessor(fLoop);
-//   fScumbler->InsertBetween(fInputId, fLoopId, fVolumeId);
-//
-//   this->addChangeListener(fScumbler);
-
-
+    looper->addChangeListener(this);
 }
 
 Track::~Track()
 {
-   NodeId input = looper->HandleSpecialNode(Node::Input);
-   NodeId output = looper->HandleSpecialNode(Node::Output);
-
-   // remove the loop & delete it
-//   looper->RemoveBetween(fInputId, fLoopId, fVolumeId, true);
-//   // remove the output gain node & delete it.
-//   fScumbler->RemoveBetween(fInputId, fVolumeId, output, true);
-//   // remove the input processor & delete it.
-//
-//   bool reconnectInputAndOutput = (0 == --Track::sTrackCount);
-//
-//   fScumbler->RemoveBetween(input, fInputId, output, true, reconnectInputAndOutput);
-//
-//   this->removeChangeListener(fScumbler);
+    
 }
+
+void Track::changeListenerCallback(ChangeBroadcaster* source)
+{
+    if (source == looper and looper->IsGlobalMuteOn())
+    {
+        this->sendChangeMessage();
+    }
+}
+
 
 String Track::GetName() const
 {
    return this->name;
 }
 
-void Track::MuteUnmute()
+void Track::Mute(bool mute)
 {
     ScopedLock sl(this->mutex);
-    this->muted = !this->muted;
+    this->muted = mute;
     this->sendChangeMessage();
 }
 
@@ -91,6 +64,12 @@ bool Track::IsMuted() const
 {
    ScopedLock sl(this->mutex);
    return this->muted;
+}
+
+bool Track::IsGlobalMuteOn() const
+{
+    ScopedLock sl(this->mutex);
+    return looper->IsGlobalMuteOn();
 }
 
 void Track::SelectTrack()
@@ -113,52 +92,18 @@ bool Track::IsSelected() const
     return this->selected;
 }
 
-void Track::SetLoopDuration(float duration)
+void Track::SetLoopDuration(int duration)
 {
     ScopedLock sl(this->mutex);
-    this->loopDuration = duration;
+    loop->SetLoopDuration(duration);
     this->sendChangeMessage();
 }
 
-//void Track::SetInputGain(float gainInDb)
-//{
-//   if (gainInDb != fInputGain)
-//   {
-//      fInputGain = gainInDb;
-//
-//      float gain = DbToFloat(fInputGain);
-//      fInputProcessor->SetGain(gain);
-//
-//      // update our observers.
-//      // std::cout << "Track::SetInputGain->sendChangeMessage" << std::endl;
-//      this->sendChangeMessage();
-//   }
-//}
+LoopStates Track::GetLoopState()
+{
+    return looper->GetMode();
+}
 
-//float Track::GetInputGain() const
-//{
-//   return fInputGain;
-//}
-//
-//tk::Result Track::SetInputPan(float pan)
-//{
-//   if (fPan != pan)
-//   {
-//      fInputProcessor->SetPan(pan);
-//      fPan = pan;
-//      // std::cout << "Track::SetInputPan->sendChangeMessage" << std::endl;
-//      fScumbler->SetDirty();
-//      this->sendChangeMessage();
-//   }
-//   return tk::kSuccess;
-//
-//}
-//
-//float Track::GetInputPan() const
-//{
-//   return fPan;
-//}
-//
 //void Track::SetEnabledChannels(tk::ChannelEnable channels)
 //{
 //   if (this->GetEnabledChannels() != channels)
@@ -175,41 +120,26 @@ void Track::SetLoopDuration(float duration)
 //   return fInputProcessor->GetEnabledChannels();
 //}
 
-void Track::ResetLoop()
+void Track::ResetLoop(bool resetingAllTracks)
 {
-//   fLoop->Reset();
+    if (resetingAllTracks)
+    {
+        this->UnselectTrack();
+    }
+    loop->Reset(resetingAllTracks);
+    this->Mute(false);
 }
 
-void Track::SeekAbsolute(int loopPos)
+void Track::PlayFromBeginning()
 {
-//   if (fLoop)
-//   {
-//      fLoop->SeekAbsolute(loopPos);
-//   }
-
+    loop->PlayFromBeginning();
+    this->sendChangeMessage();
 }
 
-//void Track::SetOutputVolume(float volumeInDb)
-//{
-//   if (volumeInDb != fOutputVolume)
-//   {
-//      fOutputVolume = volumeInDb;
-//
-//      float gain = DbToFloat(fOutputVolume);
-//      fOutputGain->SetGain(gain);
-//
-//      // update our observers.
-//      //std::cout << "Track::SetOutputVolume->sendChangeMessage" << std::endl;
-//      fScumbler->SetDirty();
-//      this->sendChangeMessage();
-//   }
-//
-//}
-//
-//float Track::GetOutputVolume() const
-//{
-//   return fOutputVolume;
-//}
+void Track::StopTrack()
+{
+    loop->StopLoop();
+}
 
 
 //void Track::UpdateChangeListeners(bool add, ListenTo target, ChangeListener* listener)

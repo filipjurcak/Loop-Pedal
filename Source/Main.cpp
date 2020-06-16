@@ -1,5 +1,4 @@
 #include <JuceHeader.h>
-//#include "MainComponent.h"
 #include "WaveformComponent.h"
 #include "TracksComponent.h"
 #include "Looper.h"
@@ -10,7 +9,27 @@ class LoopPedalApplication: public JUCEApplication
 public:
     //==============================================================================
     LoopPedalApplication() {
-        deviceManager.initialise(2, 2, nullptr, true);
+        AudioDeviceSelectorComponent audioConfig(deviceManager,
+          1, 2,     // at least one input channel, no more than 2
+          1, 2,     // at least one output channel, no more than 2
+          true,     // show midi input options
+          true,     // show midi output options
+          true,     // show channels as stereo pairs.
+          false     // don't hide the advanced options.
+          );
+
+        audioConfig.setSize(500, 450);
+
+        DialogWindow::LaunchOptions(o);
+        o.content.setNonOwned(&audioConfig);
+        o.dialogTitle = "Configure Audio";
+        o.dialogBackgroundColour = Colours::grey;
+        o.escapeKeyTriggersCloseButton = true;
+        o.useNativeTitleBar = true;
+        o.resizable = false;
+
+        o.runModal();
+
         looper = std::make_unique<Looper>(deviceManager);
     }
 

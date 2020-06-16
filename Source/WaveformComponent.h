@@ -22,6 +22,8 @@
 //[Headers]     -- You can add your own extra header files here --
 #include "Looper.h"
 #include <JuceHeader.h>
+#include "PositionOverlay.h"
+#include "ThumbnailComponent.h"
 //[/Headers]
 
 
@@ -34,16 +36,17 @@
     Describe your class and how it works here!
                                                                     //[/Comments]
 */
-class WaveformComponent  : public Component
+class WaveformComponent  : public Component,
+                           public ChangeListener
 {
 public:
     //==============================================================================
-    WaveformComponent ();
+    WaveformComponent (Looper* looper);
     ~WaveformComponent() override;
 
     //==============================================================================
     //[UserMethods]     -- You can add your own custom methods in this section.
-    WaveformComponent (Looper* looper);
+    void changeListenerCallback(ChangeBroadcaster* source) override;
     //[/UserMethods]
 
     void paint (Graphics& g) override;
@@ -54,6 +57,20 @@ public:
 private:
     //[UserVariables]   -- You can add your own custom variables in this section.
     Looper* looper;
+
+    Track* track;
+
+    Label label;
+
+    int labelSize = 25;
+
+    AudioThumbnailCache thumbnailCache;
+
+    AudioFormatManager formatManager;
+
+    ThumbnailComponent thumbnailComp;
+
+    PositionOverlay positionOverlay;
     //[/UserVariables]
 
     //==============================================================================
