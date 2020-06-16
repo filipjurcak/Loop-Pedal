@@ -4,6 +4,8 @@
               companyEmail="jurcak.filip@gmail.com">
   <MAINGROUP id="m7yqpi" name="Loop Pedal">
     <GROUP id="{B3C6AAD0-8B67-2B66-CAD1-8C671C2B4B69}" name="Source">
+      <FILE id="DrOHKx" name="Muter.cpp" compile="1" resource="0" file="Source/Muter.cpp"/>
+      <FILE id="bgkUxM" name="Muter.h" compile="0" resource="0" file="Source/Muter.h"/>
       <FILE id="xmasOM" name="PositionOverlay.cpp" compile="1" resource="0"
             file="Source/PositionOverlay.cpp"/>
       <FILE id="sfw7gU" name="PositionOverlay.h" compile="0" resource="0"
@@ -102,7 +104,7 @@
         <MODULEPATH id="juce_opengl" path="../../../JUCE/modules"/>
       </MODULEPATHS>
     </LINUX_MAKE>
-    <CLION targetFolder="Builds/CLion">
+    <CLION targetFolder="Builds/CLion" clionXcodeEnabled="1" clionMakefileEnabled="1">
       <MODULEPATHS>
         <MODULEPATH id="juce_audio_basics" path="../../../JUCE/modules"/>
         <MODULEPATH id="juce_audio_devices" path="../../../JUCE/modules"/>
