@@ -42,14 +42,14 @@ WaveformComponent::WaveformComponent (Looper* looper)
 
 
     //[Constructor] You can add your own custom stuff here..
-//    looper->addChangeListener(this);
+    looper->addChangeListener(this);
     track = looper->GetSelectedTrack();
     label.setText(track->GetName(), NotificationType::dontSendNotification);
     label.setJustificationType(Justification::centred);
     label.setFont(Font (15.0f, Font::bold));
     addAndMakeVisible(this->label);
     addAndMakeVisible(&thumbnailComp);
-//    addAndMakeVisible(&positionOverlay);
+    addAndMakeVisible(&positionOverlay);
     //[/Constructor]
 }
 

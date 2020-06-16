@@ -50,8 +50,6 @@ public:
     
     void PlayFromBeginning();
 
-    void StopTrack();
-
     LoopProcessor* GetLoopProcessor() const { return loop; };
     
     void setMuterBypass(bool shouldBypass);

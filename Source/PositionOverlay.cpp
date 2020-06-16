@@ -42,7 +42,6 @@ PositionOverlay::PositionOverlay (LoopProcessor* loopProcessor)
 
     //[Constructor] You can add your own custom stuff here..
     startTimer (40);
-    setOpaque(false);
     //[/Constructor]
 }
 
@@ -63,8 +62,6 @@ void PositionOverlay::paint (Graphics& g)
     //[UserPrePaint] Add your own custom painting code here..
     //[/UserPrePaint]
 
-    g.fillAll (Colours::black);
-
     //[UserPaint] Add your own custom painting code here..
     auto duration = loopProcessor->GetLoopDuration();
 
@@ -75,8 +72,8 @@ void PositionOverlay::paint (Graphics& g)
         auto audioPosition = (float) loopPositionSample * 1000.0 / sampleRate;
         auto drawPosition = (audioPosition / duration) * getWidth();
 
-        g.setColour (Colours::green);
-        g.drawLine (drawPosition, 0.0f, drawPosition, (float) getHeight(), 2.0f);
+        g.setColour (Colours::white);
+        g.drawLine (drawPosition, 25.0f, drawPosition, (float) getHeight(), 2.0f);
     }
     //[/UserPaint]
 }
@@ -114,7 +111,7 @@ BEGIN_JUCER_METADATA
                  variableInitialisers="loopProcessor(loopProcessor)" snapPixels="8"
                  snapActive="1" snapShown="1" overlayOpacity="0.330" fixedSize="0"
                  initialWidth="600" initialHeight="400">
-  <BACKGROUND backgroundColour="ff000000"/>
+  <BACKGROUND backgroundColour="0"/>
 </JUCER_COMPONENT>
 
 END_JUCER_METADATA

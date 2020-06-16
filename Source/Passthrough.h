@@ -16,19 +16,10 @@
 class PassthroughProcessor : public AudioProcessor
 {
 public:
-    /**
-    *   @param inputChannelCount number of desired input channels
-    *   @param outputChannelCount number of desired output channels (if ==0, will
-    *   match the setting of the input channels.)
-    */
     PassthroughProcessor(int inputChannelCount = 1, int outputChannelCount=0);
 
     ~PassthroughProcessor();
-   
-    /**
-     * get the name of this processor.
-     * @return String filled with the name.
-     */
+
     const String getName() const;
 
     int GetInputChannelCount() const { return inputChannelCount; }
@@ -89,6 +80,7 @@ public:
 
 protected:
     int inputChannelCount;
+
     int outputChannelCount;
 
 private:

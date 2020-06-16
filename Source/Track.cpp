@@ -20,7 +20,7 @@ Track::Track(Looper* looper, const String& name, bool selected)
     Node::Ptr outputNode = looper->GetOutputNode();
 
     // create & insert the loop processor
-    std::unique_ptr<AudioProcessor> loopProcessor = std::make_unique<LoopProcessor>(this, 2);
+    std::unique_ptr<AudioProcessor> loopProcessor = std::make_unique<LoopProcessor>(looper, this, 2);
     auto loopNode = looper->AddProcessor(std::move(loopProcessor));
     // this is ugly, but I don't know how to do it better yet
     loop = dynamic_cast<LoopProcessor*>(loopNode->getProcessor());
@@ -120,11 +120,6 @@ void Track::PlayFromBeginning()
 {
     loop->PlayFromBeginning();
     this->sendChangeMessage();
-}
-
-void Track::StopTrack()
-{
-    loop->StopLoop();
 }
 
 void Track::setMuterBypass(bool shouldBypass)

@@ -9,18 +9,17 @@
 */
 
 #include "Loop.h"
-#include <math.h>
 #include "Track.h"
+#include "Looper.h"
 
-
-LoopProcessor::LoopProcessor(Track* track, int channelCount)
+LoopProcessor::LoopProcessor(Looper* looper, Track* track, int channelCount)
 :  PassthroughProcessor(channelCount, channelCount)
+,  looper(looper)
 ,  track(track)
 ,  loopBuffer(new AudioBuffer<float>(channelCount, 0))
 ,  channelCount(channelCount)
 {
-    loopBuffer->clear();
-//    this->addChangeListener(track);
+    this->Reset(true);
 }
 
 LoopProcessor::~LoopProcessor()
@@ -32,6 +31,7 @@ void LoopProcessor::SetLoopDuration(int milliseconds)
 {
     ScopedLock sl(mutex);
     loopDuration = milliseconds;
+    loopPosition = 0;
     int sampleCount = int(sampleRate * milliseconds / 1000.0);
     loopBuffer->setSize(inputChannelCount, sampleCount, true);
     this->sendChangeMessage();
@@ -39,13 +39,11 @@ void LoopProcessor::SetLoopDuration(int milliseconds)
 
 int LoopProcessor::GetLoopDuration() const
 {
-   ScopedLock sl(mutex);
    return loopDuration;
 }
 
 int LoopProcessor::GetLoopPosition() const
 {
-    ScopedLock sl(mutex);
     return loopPosition;
 }
 
@@ -55,33 +53,6 @@ float LoopProcessor::GetMagnitude() const
     int sampleCount = int(sampleRate * loopDuration / 1000.0);
     return loopBuffer->getMagnitude(loopPosition, std::min(samplesPerBlock, std::max(0, sampleCount - loopPosition)));
 }
-
-//bool LoopProcessor::IsPlaying() const
-//{
-//   bool retval = false;
-//   if (fTrack)
-//   {
-//      retval = fTrack->IsPlaying();
-//   }
-//   return retval;
-//}
-
-
-
-//float LoopProcessor::GetThumbnailPoint(int channel, int startSample, int endSample)
-//{
-//   float retval = 0.f;
-//   jassert(endSample > startSample);
-//   jassert(channel < fInputChannelCount);
-//   if (fLoopBuffer && (channel < fInputChannelCount) && (endSample > startSample))
-//   {
-//      endSample = mMin(endSample, fLoopBuffer->getNumSamples());
-//      int numSamples = endSample - startSample;
-//      retval = fLoopBuffer->getMagnitude(channel, startSample, numSamples);
-//   }
-//   return retval;
-//}
-
 
 void LoopProcessor::Reset(bool resetBufferSize)
 {
@@ -103,32 +74,6 @@ void LoopProcessor::PlayFromBeginning()
     this->sendChangeMessage();
 }
 
-void LoopProcessor::StopLoop()
-{
-    ScopedLock sl(mutex);
-    loopPosition = 0;
-    this->sendChangeMessage();
-}
-
-void LoopProcessor::GetLoopInfo(LoopInfo& info)
-{
-//   ScopedLock sl(fMutex);
-//   info.fSampleRate = fSampleRate;
-//   info.fLoopSample = fLoopPosition;
-//   if (fLoopBuffer)
-//   {
-//      info.fLoopLength = fLoopBuffer->getNumSamples();
-//   }
-//   else
-//   {
-//      info.fLoopLength = 0;
-//   }
-//   info.fLoopCount = fLoopCount;
-//   info.fIsPlaying = fTrack->IsPlaying();
-//   info.fWasReset = fWasReset;
-//   fWasReset = false;
-}
-
 const String LoopProcessor::getName() const
 {
    return "LoopProcessor";
@@ -138,7 +83,7 @@ void LoopProcessor::prepareToPlay(double sampleRate, int estimatedSamplesPerBloc
 {
     PassthroughProcessor::prepareToPlay(sampleRate, estimatedSamplesPerBlock);
     sampleRate = sampleRate;
-//    samplesPerBlock = estimatedSamplesPerBlock;
+    samplesPerBlock = estimatedSamplesPerBlock;
     // we may need to resize our internal buffers.
     this->SetLoopDuration(loopDuration);
 
@@ -156,8 +101,11 @@ void LoopProcessor::processBlock(AudioBuffer<float>& buffer, MidiBuffer& midiMes
     int sampleCount = buffer.getNumSamples();
     int loopSampleCount = loopBuffer->getNumSamples();
     LoopStates loopState = track->GetLoopState();
-    if (loopState == LoopStates::Record and loopDuration == 0 and loopSampleCount < loopPosition + sampleCount) {
+    // we check here if loop state is record or overdub, as it can happen
+    // that use clicked button to stop first recording, which changes loopState to Overdub
+    if ((loopState == LoopStates::Record or loopState == LoopStates::Overdub) and loopDuration == 0 and loopPosition + sampleCount > loopSampleCount) {
         loopBuffer->setSize(channelCount, loopPosition + sampleCount, true);
+        loopBuffer->clear(loopSampleCount, sampleCount);
         loopSampleCount = loopBuffer->getNumSamples();
     }
     
@@ -220,10 +168,14 @@ void LoopProcessor::processBlock(AudioBuffer<float>& buffer, MidiBuffer& midiMes
     }
 
     // set the loop position for the next block of data.
-    loopPosition += sampleCount;
-    if (loopPosition >= loopSampleCount)
+    if (looper->GetRecordState() != RecordState::NotRecorded)
     {
-        loopPosition -= loopSampleCount;
+        loopPosition += sampleCount;
+        // only substract when we already recorded something, otherwise keep the position as is
+        if (looper->GetRecordState() == RecordState::Recorded and loopPosition >= loopSampleCount)
+        {
+            loopPosition -= loopSampleCount;
+        }
     }
     // Notify anyone who's observing this processor that we've gotten new sample data.
     this->sendChangeMessage();

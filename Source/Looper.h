@@ -19,6 +19,7 @@ using Node = AudioProcessorGraph::Node;
 class Track;
 
 class Looper: public MidiInputCallback, public ChangeBroadcaster
+{
 public:
     friend class Track;
 
@@ -31,6 +32,8 @@ public:
     LoopStates GetMode() const;
     
     bool IsGlobalMuteOn() const;
+    
+    RecordState GetRecordState() const;
 
     Track* GetSelectedTrack() const;
 
@@ -86,13 +89,13 @@ private:
 
     LoopStates mode = LoopStates::PlayInRecord;
 
-    bool wasRecorded = false;
+    RecordState recordState = RecordState::NotRecorded;
     
     bool globalMute = false;
 
-    double startLoopingTime;
+    double startLoopingTime = -1.0f;
 
-    double loopTime;
+    double loopTime = -1.0f;
 
     int selectedTrack = 0;
 

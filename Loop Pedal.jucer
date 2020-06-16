@@ -31,8 +31,6 @@
             file="Source/WaveformComponent.cpp"/>
       <FILE id="HYhcP0" name="WaveformComponent.h" compile="0" resource="0"
             file="Source/WaveformComponent.h"/>
-      <FILE id="gMdbna" name="Gain.cpp" compile="1" resource="0" file="Source/Gain.cpp"/>
-      <FILE id="Td8S1d" name="Gain.h" compile="0" resource="0" file="Source/Gain.h"/>
       <FILE id="BHehyw" name="Track.cpp" compile="1" resource="0" file="Source/Track.cpp"/>
       <FILE id="YAc2DD" name="Track.h" compile="0" resource="0" file="Source/Track.h"/>
       <FILE id="ElUYk7" name="Looper.cpp" compile="1" resource="0" file="Source/Looper.cpp"/>

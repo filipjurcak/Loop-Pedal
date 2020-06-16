@@ -71,6 +71,11 @@ bool Looper::IsGlobalMuteOn() const
     return globalMute;
 }
 
+RecordState Looper::GetRecordState() const
+{
+    return recordState;
+}
+
 Track* Looper::GetSelectedTrack() const
 {
     return this->tracks[this->selectedTrack];
@@ -223,11 +228,10 @@ void Looper::ResetAllTracks()
        this->tracks[i]->ResetLoop(true);
     }
     this->ChangeSelectedTrack(0);
-    this->wasRecorded = false;
+    startLoopingTime = loopTime = -1.0f;
+    recordState = RecordState::NotRecorded;
     
     this->ChangeMode(LoopStates::PlayInRecord);
-   // set the sample count back to zero.
-//   fSampleCount->Reset();
 }
 
 void Looper::PlayAllTracks()
@@ -310,9 +314,10 @@ void Looper::handleIncomingMidiMessage(MidiInput *source, const MidiMessage& mes
             {
                 if (this->mode == LoopStates::PlayInRecord)
                 {
-                    if (!wasRecorded)
+                    if (recordState == RecordState::NotRecorded)
                     {
                         this->startLoopingTime = Time::getMillisecondCounterHiRes() * 0.001;
+                        recordState = RecordState::StartedRecording;
                         this->ChangeMode(LoopStates::Record);
                     }
                     else
@@ -322,17 +327,16 @@ void Looper::handleIncomingMidiMessage(MidiInput *source, const MidiMessage& mes
                 }
                 else if (this->mode == LoopStates::Record)
                 {
-                    if (!this->wasRecorded)
+                    if (recordState == RecordState::StartedRecording)
                     {
                         this->loopTime = Time::getMillisecondCounterHiRes() * 0.001 - startLoopingTime;
+                        recordState = RecordState::Recorded;
+                        this->ChangeMode(LoopStates::Overdub);
                         for (int i = 0; i < this->tracks.size(); i++)
                         {
                             this->tracks[i]->SetLoopDuration(int(this->loopTime * 1000));
                         }
-                        Logger::writeToLog("Loop time is " + String(this->loopTime));
-                        this->wasRecorded = true;
                     }
-                    this->ChangeMode(LoopStates::Overdub);
                 }
                 else if (this->mode == LoopStates::Overdub)
                 {
@@ -365,15 +369,14 @@ void Looper::handleIncomingMidiMessage(MidiInput *source, const MidiMessage& mes
                 this->ChangeSelectedTrack(selectedTrack);
                 if (this->mode == LoopStates::Record)
                 {
-                    if (!this->wasRecorded)
+                    if (recordState == RecordState::StartedRecording)
                     {
                         this->loopTime = Time::getMillisecondCounterHiRes() * 0.001 - startLoopingTime;
+                        recordState = RecordState::Recorded;
                         for (int i = 0; i < this->tracks.size(); i++)
                         {
                             this->tracks[i]->SetLoopDuration(int(this->loopTime * 1000));
                         }
-                        Logger::writeToLog("Loop time is " + String(this->loopTime));
-                        this->wasRecorded = true;
                     }
                     this->ChangeMode(LoopStates::Overdub);
                 }

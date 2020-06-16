@@ -25,3 +25,5 @@ enum ButtonMidiNotes: int {
 };
 
 enum class LoopStates { Play, Record, Overdub, PlayInRecord };
+
+enum class RecordState { NotRecorded, StartedRecording, Recorded };

@@ -46,7 +46,8 @@ ThumbnailComponent::ThumbnailComponent (int sourceSamplesPerThumbnailSample, Aud
     track = looper->GetSelectedTrack();
     loopProcessor = track->GetLoopProcessor();
     this->fillThumbnail();
-//    looper->addChangeListener(this);
+    looper->addChangeListener(this);
+    loopProcessor->addChangeListener(this);
     //[/Constructor]
 }
 
@@ -72,8 +73,7 @@ void ThumbnailComponent::paint (Graphics& g)
     //[UserPaint] Add your own custom painting code here..
     if (thumbnail.getNumChannels() != 0)
     {
-        std::cout << "I'm repainting myself - Waveform\n";
-        g.setColour (Colours::red);
+        g.setColour (Colours::limegreen);
         thumbnail.drawChannels (g, getLocalBounds(), 0.0, thumbnail.getTotalLength(), 1.0f);
     }
     //[/UserPaint]
@@ -101,6 +101,11 @@ void ThumbnailComponent::changeListenerCallback (ChangeBroadcaster* source)
     {
         track = looper->GetSelectedTrack();
         loopProcessor = track->GetLoopProcessor();
+        loopProcessor->addChangeListener(this);
+        fillThumbnail();
+    }
+    else if (source == loopProcessor)
+    {
         fillThumbnail();
     }
 }
@@ -109,12 +114,8 @@ void ThumbnailComponent::fillThumbnail()
 {
     auto loopBuffer = loopProcessor->GetLoopBuffer();
     auto sampleRate = loopProcessor->GetSampleRate();
-    std::cout << "Number of input channels in buffer is " << loopBuffer->getNumChannels() << "\n";
-    std::cout << "Sample rate of a buffer is " << sampleRate << "\n";
-    std::cout << "Number of samples in buffer is " << loopBuffer->getNumSamples() << "\n";
-    thumbnail.reset(loopBuffer->getNumChannels(), sampleRate, loopBuffer->getNumSamples());
+    thumbnail.reset(1, sampleRate, loopBuffer->getNumSamples());
     thumbnail.addBlock(0, *loopBuffer, 0, loopBuffer->getNumSamples());
-    std::cout << "Total length of file is " << thumbnail.getTotalLength() << "s\n";
     this->repaint();
 }
 //[/MiscUserCode]
