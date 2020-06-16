@@ -9,26 +9,14 @@
 */
 
 #include "Looper.h"
-#include <math.h>
 #include "LooperDefs.h"
 #include "Track.h"
-#include "Gain.h"
+#include "Muter.h"
 #include "Passthrough.h"
 
 using Connection = AudioProcessorGraph::Connection;
 using AudioGraphIOProcessor = AudioProcessorGraph::AudioGraphIOProcessor;
 using Node = AudioProcessorGraph::Node;
-
-//#include "SampleCounter.h"
-
-float DbToFloat(float db) {
-   return pow(10.0, db/20.0);
-}
-
-float GainToDb(float gain) {
-   return 20.0 * log10(gain);
-}
-
 
 Looper::Looper(AudioDeviceManager& deviceManager, int numOfTracks): graph(new AudioProcessorGraph()), deviceManager(deviceManager)
 {
@@ -41,11 +29,10 @@ Looper::Looper(AudioDeviceManager& deviceManager, int numOfTracks): graph(new Au
     outputNode = graph->addNode(std::make_unique<AudioGraphIOProcessor> (AudioGraphIOProcessor::audioOutputNode));
     this->Connect(this->inputNode, this->outputNode);
     
-    // Add the processor that counts samples for us
-    //   fSampleCount = new SampleCounterProcessor(this, 5000);
-    //   fSampleCount->addChangeListener(this);
-    //   fSampleCountNode = this->AddProcessor(fSampleCount);
-    //   this->Connect(inputNode, fSampleCountNode);
+    muterNode = graph->addNode(std::make_unique<MuterProcessor>(2));
+    this->InsertBetween(inputNode, muterNode, outputNode);
+    // for now, as we start in PlayInRecord mode, bypass the muter
+    muterNode->setBypassed(true);
     
     player.setProcessor(graph.get());
 
@@ -68,18 +55,6 @@ Looper::~Looper()
     this->graph->clear();
     this->deviceManager.removeMidiInputDeviceCallback (MidiInput::getAvailableDevices()[lastMidiInputIndex].identifier, this);
 }
-
-//void Looper::changeListenerCallback(ChangeBroadcaster* source)
-//{
-//   // std::cout << "Scumbler::changeListenerCallback()" << std::endl;
-////   if (source == sampleCount)
-////   {
-////      // just notify that we've changed so the time readout can change.
-////      timeUpdate = true;
-////       //mMsg('.');
-////      //this->sendChangeMessage();
-////   }
-//}
 
 int Looper::GetNumberOfTracks()
 {
@@ -200,10 +175,9 @@ void Looper::InsertBetween(Node::Ptr before, Node::Ptr newNode, Node::Ptr after)
         exit(1);
     }
     
-    // disconnect the two nodes if they are already connected, but not disconnect input and output nodes
-    if (graph->isConnected(before->nodeID, after->nodeID) and (before != inputNode or after != outputNode))
+    // disconnect the two nodes if they are already connected
+    if (graph->isConnected(before->nodeID, after->nodeID))
     {
-        std::cout << "Rozpajam node-y s IDs " << before->nodeID.uid << " a " << after->nodeID.uid << "\n";
         this->Disconnect(before, after);
     }
 
@@ -227,7 +201,9 @@ Node::Ptr Looper::AddProcessor(std::unique_ptr<AudioProcessor> processor) {
 
 void Looper::ChangeMode(LoopStates mode)
 {
+    ScopedLock sl(this->mutex);
     this->mode = mode;
+    muterNode->setBypassed(this->mode == LoopStates::Play or this->mode == LoopStates::PlayInRecord);
     this->sendChangeMessage();
 }
 

@@ -11,46 +11,20 @@
 #pragma once
 
 #include "../JuceLibraryCode/JuceHeader.h"
+#include "Muter.h"
 #include "LooperDefs.h"
 
 using Node = AudioProcessorGraph::Node;
 
-//class GainProcessor;
-//class SampleCounterProcessor;
 class Track;
 
-
-/**
- * Convert a decibel value into the equivalent floating-point gain.
- * @param  db decibels, probably <= 0 (but not necessarily  )
- * @return    the corresponding floating-point amplitude gain value (e.g., -6.0 ~= 0.5)
- */
-float DbToFloat(float db);
-
-/**
- * convert a gain value from 0.0 .. 1.0 into the equivalent dB value
- * @param  gain Gain to convert
- * @return      decibel value
- */
-float GainToDb(float gain);
-
-
-class Looper: public MidiInputCallback, public ChangeBroadcaster //, public ChangeListener
-{
+class Looper: public MidiInputCallback, public ChangeBroadcaster
 public:
     friend class Track;
 
     Looper(AudioDeviceManager& deviceManager, int numOfTracks = 4);
 
     ~Looper();
-
-//   /**
-//    * Called when something needs to notify us of a change. Initially,
-//    * this is only used when Track objects need to tell us that they
-//    * want to be deleted.
-//    * @param source object that's notifying us.
-//    */
-//   void changeListenerCallback(ChangeBroadcaster* source);
     
     int GetNumberOfTracks();
 
@@ -103,6 +77,8 @@ private:
     Node::Ptr inputNode = nullptr;
 
     Node::Ptr outputNode = nullptr;
+    
+    Node::Ptr muterNode = nullptr;
 
     OwnedArray<Track> tracks;
 

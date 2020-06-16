@@ -42,11 +42,11 @@ TrackComponent::TrackComponent (Track* track, LoopStates loopState)
 
     //[Constructor] You can add your own custom stuff here..
     track->addChangeListener(this);
+    track->GetLoopProcessor()->addChangeListener(this);
     label.setText(this->track->GetName(), NotificationType::dontSendNotification);
     label.setJustificationType(Justification::centred);
     label.setFont(Font (30.0f, Font::bold));
     addAndMakeVisible(this->label);
-//    addAndMakeVisible(viewport);
     //[/Constructor]
 }
 
@@ -90,7 +90,7 @@ void TrackComponent::paint (Graphics& g)
     
     g.setColour(Colours::black);
     auto viewport = getLocalBounds().toFloat().reduced(15.0f);
-    viewport.removeFromBottom(labelSize + ledSize + 15.0f);
+    viewport.removeFromBottom(labelSize + ledSize + 20.0f);
     g.fillRect(viewport);
     if (track->IsMuted() || track->IsGlobalMuteOn())
     {
@@ -100,10 +100,10 @@ void TrackComponent::paint (Graphics& g)
     {
         g.setColour(Colours::limegreen);
     }
-//    float magnitude = track->GetLoopProcessor()->GetMagnitude();
-//    auto height = viewport.getHeight() * magnitude;
-//    auto content = viewport.removeFromBottom(height);
-//    g.fillRect(content);
+    float magnitude = track->GetLoopProcessor()->GetMagnitude();
+    auto height = viewport.getHeight() * magnitude;
+    auto content = viewport.removeFromBottom(height);
+    g.fillRect(content);
     //[/UserPaint]
 }
 
@@ -122,11 +122,7 @@ void TrackComponent::resized()
 //[MiscUserCode] You can add your own definitions of your custom methods or any other code here...
 void TrackComponent::changeListenerCallback(ChangeBroadcaster* source)
 {
-//    Logger::writeToLog("TrackComponent sa chce updatnut!!!");
-    if (source == track)
-    {
-        this->repaint();
-    }
+    this->repaint();
 }
 
 void TrackComponent::changeLoopState(const LoopStates loopState) {

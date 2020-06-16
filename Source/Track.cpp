@@ -16,7 +16,6 @@ Track::Track(Looper* looper, const String& name, bool selected)
 , name(name)
 , selected(selected)
 {
-    // we need the input and output nodes that the Scumbler controls.
     Node::Ptr inputNode = looper->GetInputNode();
     Node::Ptr outputNode = looper->GetOutputNode();
 
@@ -27,9 +26,9 @@ Track::Track(Looper* looper, const String& name, bool selected)
     loop = dynamic_cast<LoopProcessor*>(loopNode->getProcessor());
     looper->InsertBetween(inputNode, loopNode, outputNode);
     
-//    auto inputGainNode = looper->AddProcessor(std::make_unique<GainProcessor>(this, 2, 0.0f));
-//    std::cout << "NodeID inputGainNode-u je " << inputGainNode->nodeID.uid << "\n";
-//    looper->InsertBetween(inputNode, inputGainNode, loopNode);
+    std::unique_ptr<AudioProcessor> muteProcessor = std::make_unique<MuterProcessor>(2);
+    muterNode = looper->AddProcessor(std::move(muteProcessor));
+    looper->InsertBetween(inputNode, muterNode, loopNode);
 
     looper->addChangeListener(this);
 }
@@ -41,9 +40,12 @@ Track::~Track()
 
 void Track::changeListenerCallback(ChangeBroadcaster* source)
 {
-    if (source == looper and looper->IsGlobalMuteOn())
+    if (source == looper)
     {
-        this->sendChangeMessage();
+        if (looper->IsGlobalMuteOn())
+            this->sendChangeMessage();
+        LoopStates mode = looper->GetMode();
+        this->setMuterBypass((mode == LoopStates::Record or mode == LoopStates::Overdub) and this->IsSelected());
     }
 }
 
@@ -104,22 +106,6 @@ LoopStates Track::GetLoopState()
     return looper->GetMode();
 }
 
-//void Track::SetEnabledChannels(tk::ChannelEnable channels)
-//{
-//   if (this->GetEnabledChannels() != channels)
-//   {
-//      fInputProcessor->SetEnabledChannels(channels);
-//      std::cout << "Track::SetEnabledChannels->sendChangeMessage" << std::endl;
-//      fScumbler->SetDirty();
-//      this->sendChangeMessage();
-//   }
-//}
-//
-//tk::ChannelEnable Track::GetEnabledChannels() const
-//{
-//   return fInputProcessor->GetEnabledChannels();
-//}
-
 void Track::ResetLoop(bool resetingAllTracks)
 {
     if (resetingAllTracks)
@@ -141,30 +127,10 @@ void Track::StopTrack()
     loop->StopLoop();
 }
 
-
-//void Track::UpdateChangeListeners(bool add, ListenTo target, ChangeListener* listener)
-//{
-//   ChangeBroadcaster* sender;
-//   switch (target)
-//   {
-//      case kPreFx: sender = fPreEffects; break;
-//
-//      case kTrack: sender = this; break;
-//
-//      case kPostFx: sender = fPostEffects; break;
-//
-//      case kLoop: sender = fLoop; break;
-//
-//      // assert on an error.
-//      default: jassert(false); break;
-//   }
-//
-//   if (add)
-//   {
-//      sender->addChangeListener(listener);
-//   }
-//   else
-//   {
-//      sender->removeChangeListener(listener);
-//   }
-//}
+void Track::setMuterBypass(bool shouldBypass)
+{
+    if (muterNode)
+    {
+        muterNode->setBypassed(shouldBypass);
+    }
+}
