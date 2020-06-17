@@ -103,13 +103,13 @@ void LoopProcessor::processBlock(AudioBuffer<float>& buffer, MidiBuffer& midiMes
     LoopStates loopState = track->GetLoopState();
     // we check here if loop state is record or overdub, as it can happen
     // that use clicked button to stop first recording, which changes loopState to Overdub
-    if ((loopState == LoopStates::Record or loopState == LoopStates::Overdub) and loopDuration == 0 and loopPosition + sampleCount > loopSampleCount) {
+    if ((loopState == LoopStates::Record || loopState == LoopStates::Overdub) && loopDuration == 0 && loopPosition + sampleCount > loopSampleCount) {
         loopBuffer->setSize(channelCount, loopPosition + sampleCount, true);
         loopBuffer->clear(loopSampleCount, sampleCount);
         loopSampleCount = loopBuffer->getNumSamples();
     }
     
-    if (track->IsSelected() and (loopState != LoopStates::Play and loopState != LoopStates::PlayInRecord))
+    if (track->IsSelected() && (loopState != LoopStates::Play && loopState != LoopStates::PlayInRecord))
     {
         for (int channel = 0; channel < inputChannelCount; ++channel)
         {
@@ -172,7 +172,7 @@ void LoopProcessor::processBlock(AudioBuffer<float>& buffer, MidiBuffer& midiMes
     {
         loopPosition += sampleCount;
         // only substract when we already recorded something, otherwise keep the position as is
-        if (looper->GetRecordState() == RecordState::Recorded and loopPosition >= loopSampleCount)
+        if (looper->GetRecordState() == RecordState::Recorded && loopPosition >= loopSampleCount)
         {
             loopPosition -= loopSampleCount;
         }

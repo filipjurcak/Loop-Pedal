@@ -97,7 +97,7 @@ void WaveformComponent::resized()
 //[MiscUserCode] You can add your own definitions of your custom methods or any other code here...
 void WaveformComponent::changeListenerCallback(ChangeBroadcaster* source)
 {
-    if (source == looper and looper->GetSelectedTrack() != track)
+    if (source == looper && looper->GetSelectedTrack() != track)
     {
         track = looper->GetSelectedTrack();
         label.setText(track->GetName(), NotificationType::dontSendNotification);

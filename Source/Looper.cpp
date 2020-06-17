@@ -208,7 +208,7 @@ void Looper::ChangeMode(LoopStates mode)
 {
     ScopedLock sl(this->mutex);
     this->mode = mode;
-    muterNode->setBypassed(this->mode == LoopStates::Play or this->mode == LoopStates::PlayInRecord);
+    muterNode->setBypassed(this->mode == LoopStates::Play || this->mode == LoopStates::PlayInRecord);
     this->sendChangeMessage();
 }
 

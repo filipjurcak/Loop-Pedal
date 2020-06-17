@@ -97,7 +97,7 @@ void ThumbnailComponent::changeListenerCallback (ChangeBroadcaster* source)
     {
         this->repaint();
     }
-    if (source == looper and track != looper->GetSelectedTrack())
+    if (source == looper && track != looper->GetSelectedTrack())
     {
         track = looper->GetSelectedTrack();
         loopProcessor = track->GetLoopProcessor();

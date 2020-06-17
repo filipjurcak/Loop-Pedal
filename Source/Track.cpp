@@ -45,7 +45,7 @@ void Track::changeListenerCallback(ChangeBroadcaster* source)
         if (looper->IsGlobalMuteOn())
             this->sendChangeMessage();
         LoopStates mode = looper->GetMode();
-        this->setMuterBypass((mode == LoopStates::Record or mode == LoopStates::Overdub) and this->IsSelected());
+        this->setMuterBypass((mode == LoopStates::Record || mode == LoopStates::Overdub) && this->IsSelected());
     }
 }
 
